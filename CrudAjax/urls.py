@@ -20,5 +20,8 @@ from Crud_Ajax import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('crud/',  views.crudView.as_view(), name='crud_ajax'),
+    path('',  views.crudView.as_view(), name='crud'),
+    path('crear/',  views.createUser.as_view(), name='crear_user'),
+    path('edit/',  views.EditCrudUser.as_view(), name='edit_user'),
+    path('eliminar/',  views.DeleteCrudUser.as_view(), name='eliminar_user'),
 ]

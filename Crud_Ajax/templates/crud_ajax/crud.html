@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} Django Ajax CRUD {% endblock %}
+
+{% block content %}
+
+<div class="container border border-1 border-primary mt-5 p-5 rounded-5">
+    <h1> Django Ajax CRUD</h1>
+    <div class="row">
+        <div class="col-md-4">
+            <h3>Agregar Usuarios</h3>
+            <form id="agregarUser" method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <input class="form-control" type="text" name="name" placeholder="Nombre" required>
+                </div>
+                <div class="form-group">
+                    <input class="form-control" type="text" name="direccion" placeholder="Direccion" required>
+                </div>
+                <div class="form-group">
+                    <input class="form-control" type="number" name="edad" min="10" max="100" placeholder="Edad"
+                        required>
+                </div>
+                <div>
+                    <button class="btn btn-primary form-control" type="submit">Guardar</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-8">
+            <h3> Usuarios</h3>
+            <table id="userTable" class="table table-striped">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Direccion</th>
+                    <th colspan="3">Edad</th>
+                </tr>
+                {% for user in users %}
+                <tr id="user-{{user.id}}">
+                    <td class="UserNombre userData" name="nombre">{{user.nombre}}</td>
+                    <td class="UserDireccion userData" name="direccion">{{user.direccion}}</td>
+                    <td class="UserEdad userData" name="edad">{{user.edad}}</td>
+                    <td align="center">
+                        <button class="btn btn-success form-control" onClick="editUser({{user.id}})">Editar</button>
+                    </td>
+                    <td align="center">
+                        <button class="btn btn-danger form-control" onClick="deleteUser({{user.id}})">Eliminar</button>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+<!--Modal -->
+
+<div id="editUserModal" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="editUserForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="form-id">
+                    <div class="form-group">
+                        <label for="form-nombre">Nombre</label>
+                        <input type="text" id="form-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="form-direccion">Direccion</label>
+                        <input type="text" id="form-direccion" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="form-edad">edad</label>
+                        <input type="number" id="form-edad" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block javascript %}
+<!---Crear usuario-->
+<script>
+    $("form#addUser").submit(function () {
+        var nombreInput = $('input[name="nombre"]').val().trim();
+        var direccionInput = $('input[name="direccion"]').val().trim();
+        var edadInput = $('input[name="edad"]').val().trim();
+        if (nombreInput && direccionInput && edadInput) {
+            // Create Ajax Call
+            $.ajax({
+                url: '',
+                data: {
+                    'nombre': nombreInput,
+                    'direccion': direccionInput,
+                    'edad': edadInput
+                },
+                dataType: 'json',
+                success: function (data) {
+                    if (data.user) {
+                        appendToUsrTable(data.user);
+                    }
+                }
+            });
+
+        } else {
+            alert(" ####### ");
+        }
+        $('form#addUser').trigger("reset");
+        return false;
+    });
+
+
+    // Delete Django Ajax Call
+    function deleteUser(id) {
+        var action = confirm("Are you sure you want to delete this user?");
+        if (action) {
+            $.ajax({
+                url: "{% url 'eliminar_user' %}",
+                type: "GET",
+                data: {
+                    'id': id,
+                },
+                dataType: 'json',
+                success: function (data) {
+                    if (data.deleted) {
+                        // Eliminar el registro de la tabla
+                        $("#userTable #user-" + id).remove();
+                        alert("User deleted successfully.");
+                    } else if (data.error) {
+                        // Mostrar error si ocurre
+                        alert("Error: " + data.error);
+                    }
+                },
+                error: function () {
+                    // Manejar errores del servidor o red
+                    alert("An error occurred. Please try again.");
+                }
+            });
+        }
+    }
+
+    // Mostrar el formulario con la información actual
+    function editUser(id) {
+        if (id) {
+            tr_id = "#user-" + id;
+            nombre = $(tr_id).find(".userNombre").text();
+            direccion = $(tr_id).find(".UserDireccion").text();
+            edad = $(tr_id).find(".UserEdad").text();
+
+            // Llenar el formulario con la información actual
+            $('#form-id').val(id);
+            $('#form-nombre').val(nombre);
+            $('#form-direccion').val(direccion);
+            $('#form-edad').val(edad);
+
+            // Mostrar el formulario modal (asegúrate de tener un modal configurado)
+            $('#editUserModal').modal('show');
+        }
+    }
+
+    // Enviar la solicitud AJAX para actualizar
+    $('#editUserForm').on('submit', function (e) {
+        e.preventDefault();
+
+        var id = $('#form-id').val();
+        var nombre = $('#form-nombre').val();
+        var direccion = $('#form-direccion').val();
+        var edad = $('#form-edad').val();
+
+        $.ajax({
+            url: "{% url 'edit_user' %}", // Ajusta la URL según tu configuración
+            type: "POST",
+            data: {
+                'id': id,
+                'nombre': nombre,
+                'direccion': direccion,
+                'edad': edad,
+                csrfmiddlewaretoken: '{{ csrf_token }}', // Agregar CSRF token
+            },
+            dataType: 'json',
+            success: function (data) {
+                if (data.updated) {
+                    // Actualizar los datos en la tabla
+                    var tr_id = "#user-" + id;
+                    $(tr_id).find(".UserNombre").text(nombre);
+                    $(tr_id).find(".UserDireccion").text(direccion);
+                    $(tr_id).find(".UserEdad").text(edad);
+
+                    // Cerrar el modal y mostrar mensaje de éxito
+                    $('#editUserModal').modal('hide');
+                    alert("User updated successfully!");
+                } else if (data.error) {
+                    alert("Error: " + data.error);
+                }
+            },
+            error: function () {
+                alert("An error occurred. Please try again.");
+            }
+        });
+    });
+
+    function appendToUsrTable(user) {
+        $("#userTable > tbody:last-child").append(`
+        <tr id="user-${user.id}">
+            <td class="userNombre" name="nombre">${user.nombre}</td>
+            '<td class="UserDireccion" name="direccion">${user.direccion}</td>
+            '<td class="UserEdad" name="edad">${user.edad}</td>
+            '<td align="center">
+                <button class="btn btn-success form-control" onClick="editUser(${user.id})" data-toggle="modal" data-target="#myModal")">Editar</button>
+            </td>
+            <td align="center">
+                <button class="btn btn-danger form-control" onClick="deleteUser(${user.id})">Borrar</button>
+            </td>
+        </tr>
+    `);
+    }
+
+    function updateToUserTabel(user) {
+        $("#userTable #user-" + user.id).children(".userData").each(function () {
+            var attr = $(this).attr("nombre");
+            if (attr == "nombre") {
+                $(this).text(user.nombre);
+            } else if (attr == "direccion") {
+                $(this).text(user.direccion);
+            } else {
+                $(this).text(user.edad);
+            }
+        });
+    }
+</script>
+{% endblock javascript %}
